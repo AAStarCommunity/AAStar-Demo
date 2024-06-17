@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BaseProvider, TransactionReceipt, TransactionResponse } from '@ethersproject/providers'
 import { BigNumber, Signer } from 'ethers'
 import { Network } from '@ethersproject/networks'
@@ -79,7 +80,7 @@ export class ERC4337EthersProvider extends BaseProvider {
     return await this.smartAccountAPI.getAccountAddress()
   }
 
-  async waitForTransaction (transactionHash: string, confirmations?: number, timeout?: number): Promise<TransactionReceipt> {
+  async waitForTransaction (transactionHash: string, _confirmations?: number, timeout?: number): Promise<TransactionReceipt> {
     const sender = await this.getSenderAccountAddress()
 
     return await new Promise<TransactionReceipt>((resolve, reject) => {
@@ -106,7 +107,8 @@ export class ERC4337EthersProvider extends BaseProvider {
       value: BigNumber.from(0),
       data: hexValue(userOp.callData), // should extract the actual called method from this "execFromEntryPoint()" call
       chainId: this.chainId,
-      wait: async (confirmations?: number): Promise<TransactionReceipt> => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      wait: async (_confirmations?: number): Promise<TransactionReceipt> => {
         const transactionReceipt = await waitForUserOp()
         if (userOp.initCode.length !== 0) {
           // checking if the wallet has been deployed by the transaction; it must be if we are here

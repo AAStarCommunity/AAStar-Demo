@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BigNumberish, Event } from 'ethers'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { EntryPoint } from '@account-abstraction/contracts'
@@ -53,7 +55,8 @@ export class UserOperationEventListener {
     this.entryPoint.off('UserOperationEvent', this.boundLisener)
   }
 
-  async listenerCallback (this: any, ...param: any): Promise<void> {
+  async listenerCallback (this: any, ..._param: any): Promise<void> {
+    // eslint-disable-next-line prefer-rest-params
     const event = arguments[arguments.length - 1] as Event
     if (event.args == null) {
       console.error('got event without args', event)

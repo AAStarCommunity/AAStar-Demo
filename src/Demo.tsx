@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
-import { HttpRpcClient, SimpleAccountAPI } from "./sdk";
+import { SimpleAccountAPI } from "./sdk";
 import styles from "./Demo.module.css";
 import { StackupPayMasterAPI } from "./sdk/StackupPayMasterAPI";
 import { LoadingButton } from "@mui/lab";
-import { Button, FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
+import { FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
 import _ from "lodash";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -13,9 +14,9 @@ import { SmartAccount } from "./sdk/AAStarAccount";
 const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
 const factoryAddress = "0x9406Cc6185a346906296840746125a0E44976454";
-const rpcUrl = "https://public.stackup.sh/api/v1/node/ethereum-sepolia";
-const paymasterUrl =
-  "https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"; // Optional - you can get one at https://app.stackup.sh/
+// const rpcUrl = "https://public.stackup.sh/api/v1/node/ethereum-sepolia";
+// const paymasterUrl =
+//   "https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"; // Optional - you can get one at https://app.stackup.sh/
 
 const TestnetERC20ABI = [
   {
@@ -441,7 +442,7 @@ const getWallet = () => {
   return signer;
 };
 
-const getSimpleAccount = (wallet: ethers.Wallet, bundlerUrl, paymasterUrl) => {
+const getSimpleAccount = (wallet: ethers.Wallet, bundlerUrl: string, paymasterUrl: string) => {
   const accountAPI = new SimpleAccountAPI({
     provider: new ethers.providers.JsonRpcProvider(bundlerUrl),
     entryPointAddress,
@@ -495,11 +496,11 @@ function Demo() {
       mintBtnText: "Mint USDT"
     },
   ]);
-  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>(
+  const [, setCurrentWalletAddress] = useState<string>(
     ethers.constants.AddressZero
   );
   //  const [currentSmartAccount, setCurrentSmartAccount] = useState<BaseAccountAPI | null>(null)
-  const [currentSmartAccountAddress, setCurrentSmartAccountAddress] =
+  const [, setCurrentSmartAccountAddress] =
     useState<string>(ethers.constants.AddressZero);
   useEffect(() => {
     const init = async () => {

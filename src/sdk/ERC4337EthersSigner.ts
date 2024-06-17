@@ -77,7 +77,7 @@ export class ERC4337EthersSigner extends Signer {
     }
   }
 
-  connect (provider: Provider): Signer {
+  connect (_provider: Provider): Signer {
     throw new Error('changing providers is not supported')
   }
 
@@ -92,7 +92,7 @@ export class ERC4337EthersSigner extends Signer {
     return await this.originalSigner.signMessage(message)
   }
 
-  async signTransaction (transaction: Deferrable<TransactionRequest>): Promise<string> {
+  async signTransaction (_transaction: Deferrable<TransactionRequest>): Promise<string> {
     throw new Error('not implemented')
   }
 
