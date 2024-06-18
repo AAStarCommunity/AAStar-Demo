@@ -1,7 +1,7 @@
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
+
 import Demo from './Demo.tsx'
 import './index.css'
 import {
@@ -11,12 +11,9 @@ import {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App></App>,
-  },
-  {
-    path: "/demo",
     element: <Demo></Demo>,
   },
+
 ]);
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
