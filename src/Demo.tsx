@@ -695,7 +695,7 @@ function Demo() {
     const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
     const result = await userOp?.wait(); `
   return (
-    <div>
+    <div className={styles.root}>
       {/* <div>EOA Account: {currentWalletAddress}</div>
       <div>Smart Account: {currentSmartAccountAddress}</div> */}
       <a className={styles.contractLink} href="https://sepolia.etherscan.io/address/0x7169d38820dfd117c3fa1f22a697dba58d90ba06" target="_blank">Contract : {TestUSDT}</a>
