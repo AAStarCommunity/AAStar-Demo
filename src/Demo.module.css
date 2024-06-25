@@ -2,7 +2,7 @@
     max-width: 1280px;
     margin: 0 auto;
     padding: 2rem;
-   
+    
   }
 
 .mintRow {
@@ -36,4 +36,8 @@
     font-weight: bold;
     margin-bottom: 20px;
     display: block;
+}
+
+.TransactionTable {
+    margin-top: 20px;
 }

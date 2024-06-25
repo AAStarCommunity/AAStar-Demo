@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { UserOperationStruct } from "@account-abstraction/contracts";
-import { PaymasterAPI } from "./PaymasterAPI";
+import { PaymasterAPI } from "../PaymasterAPI";
 import { ethers } from "ethers";
-import { calcPreVerificationGas } from "./calcPreVerificationGas";
+import { calcPreVerificationGas } from "../calcPreVerificationGas";
 async function OptoJSON(op: Partial<UserOperationStruct>): Promise<any> {
     const userOp = await ethers.utils.resolveProperties(op);
     return Object.keys(userOp)
@@ -26,7 +26,6 @@ export class StackupPayMasterAPI extends PaymasterAPI {
     private entryPoint: string;
     constructor(paymasterUrl: string, entryPoint: string) {
       super();
-     console.log("StackupPayMasterAPI")
       this.paymasterUrl = paymasterUrl;
       this.entryPoint = entryPoint;
     }
