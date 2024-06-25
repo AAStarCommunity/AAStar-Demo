@@ -1,22 +1,19 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
-import { SimpleAccountAPI } from "./sdk";
+import { HttpRpcClient, SimpleAccountAPI } from "./sdk";
 import styles from "./Demo.module.css";
 import { StackupPayMasterAPI } from "./sdk/StackupPayMasterAPI";
 import { LoadingButton } from "@mui/lab";
-import { FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
+import { Button, FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
 import _ from "lodash";
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { SmartAccount } from "./sdk/AAStarAccount";
+import { AAStarPayMasterAPI } from "./sdk/AAStarPayMasterAPI";
 const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
 const factoryAddress = "0x9406Cc6185a346906296840746125a0E44976454";
-// const rpcUrl = "https://public.stackup.sh/api/v1/node/ethereum-sepolia";
-// const paymasterUrl =
-//   "https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"; // Optional - you can get one at https://app.stackup.sh/
+const rpcUrl = "https://public.stackup.sh/api/v1/node/ethereum-sepolia";
+const paymasterUrl =
+  "https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"; // Optional - you can get one at https://app.stackup.sh/
 
 const TestnetERC20ABI = [
   {
@@ -442,13 +439,20 @@ const getWallet = () => {
   return signer;
 };
 
-const getSimpleAccount = (wallet: ethers.Wallet, bundlerUrl: string, paymasterUrl: string) => {
+const getSimpleAccount = (
+  wallet: ethers.Wallet,
+  bundlerUrl: string,
+  paymasterUrl: string
+) => {
   const accountAPI = new SimpleAccountAPI({
     provider: new ethers.providers.JsonRpcProvider(bundlerUrl),
     entryPointAddress,
     owner: wallet,
     factoryAddress,
-    paymasterAPI: new StackupPayMasterAPI(paymasterUrl, entryPointAddress),
+    paymasterAPI:
+      paymasterUrl.indexOf("aastar") >= 0
+        ? new AAStarPayMasterAPI(paymasterUrl, entryPointAddress)
+        : new StackupPayMasterAPI(paymasterUrl, entryPointAddress),
   });
   return accountAPI;
 };
@@ -496,11 +500,11 @@ function Demo() {
       mintBtnText: "Mint USDT"
     },
   ]);
-  const [, setCurrentWalletAddress] = useState<string>(
+  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>(
     ethers.constants.AddressZero
   );
   //  const [currentSmartAccount, setCurrentSmartAccount] = useState<BaseAccountAPI | null>(null)
-  const [, setCurrentSmartAccountAddress] =
+  const [currentSmartAccountAddress, setCurrentSmartAccountAddress] =
     useState<string>(ethers.constants.AddressZero);
   useEffect(() => {
     const init = async () => {
@@ -534,12 +538,13 @@ function Demo() {
   };
   const mintUSDT = async (data: MintItem) => {
     const wallet = getWallet();
-  
+    const smartAccount = getSimpleAccount(wallet, bundler, payMaster);
+    const address = await smartAccount.getCounterFactualAddress();
     // const smartAccountContract = await smartAccount._getAccountContract();
     const TestnetERC20 = new ethers.Contract(
       TestUSDT,
       TestnetERC20ABI,
-    
+      smartAccount.provider
     );
     // Encode the calls
     const callTo = [TestUSDT];
@@ -551,24 +556,20 @@ function Demo() {
     ];
     // const encodeCallData = smartAccountContract.interface.encodeFunctionData("executeBatch", [callTo, callData]);
     //console.log([callTo, callData], encodeCallData)
-    const smartAccount = new SmartAccount({
-      bundler: {
-        provider: bundler.includes("stackup") ? "stackup": bundler.includes("pimlico") ? "pimlico" : "zerodev" ,
-        config: {
-          url: bundler
-        }
-      },
-      paymaster: {
-        provider:  payMaster.includes("stackup") ? "stackup": bundler.includes("stackup") ? "pimlico" : "zerodev" ,
-        config: {
-          url: payMaster
-        }
-      }
-    })
-    const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
-    console.log("Waiting for transaction..." + userOp?.userOpHash);
-    const result = await userOp?.wait()
-    console.log(`Transaction hash: ${result?.transactionHash}`);
+    const op = await smartAccount.createSignedUserOp({
+      target: address,
+      data: [callTo, callData],
+    });
+
+    const chainId = await smartAccount.provider
+      .getNetwork()
+      .then((net) => net.chainId);
+    const client = new HttpRpcClient(rpcUrl, entryPointAddress, chainId);
+    const userOpHash = await client.sendUserOpToBundler(op);
+
+    console.log("Waiting for transaction...");
+    const transactionHash = await smartAccount.getUserOpReceipt(userOpHash);
+    console.log(`Transaction hash: ${transactionHash}`);
     await updateUSDTBalance();
     setMintList((items) => {
       const newItems = [...items];
@@ -583,14 +584,11 @@ function Demo() {
     });
     setTransactionLogs((items) => {
       const newItems = [...items]
-      if (userOp?.userOpHash && result?.transactionHash) {
-        newItems.unshift({
-          userOpHash: userOp?.userOpHash,
-          transactionHash: `${result?.transactionHash}`
-        })
-        localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
-      }
-
+      newItems.unshift({
+        userOpHash: userOpHash,
+        transactionHash: `${transactionHash}`
+      })
+      localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
       return newItems;
     })
     //console.log(`View here: https://jiffyscan.xyz/userOpHash/${userOpHash}`);
@@ -598,12 +596,13 @@ function Demo() {
   const batchMintUSDT = async () => {
     setBatchLoading(true);
     const wallet = getWallet();
-
+    const smartAccount = getSimpleAccount(wallet, bundler, payMaster);
+    const address = await smartAccount.getCounterFactualAddress();
     // const smartAccountContract = await smartAccount._getAccountContract();
     const TestnetERC20 = new ethers.Contract(
       TestUSDT,
       TestnetERC20ABI,
-      
+      smartAccount.provider
     );
     // Encode the calls
 
@@ -618,37 +617,29 @@ function Demo() {
     })
     // const encodeCallData = smartAccountContract.interface.encodeFunctionData("executeBatch", [callTo, callData]);
     //console.log([callTo, callData], encodeCallData)
-    const smartAccount = new SmartAccount({
-      bundler: {
-        provider: "stackup",
-        config: {
-          url: bundler
-        }
-      },
-      paymaster: {
-        provider: "stackup",
-        config: {
-          url: payMaster
-        }
-      }
-    })
-    const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
-    console.log("Waiting for transaction..." + userOp?.userOpHash);
-    const result = await userOp?.wait()
-    console.log(`Transaction hash: ${result?.transactionHash}`);
+    const op = await smartAccount.createSignedUserOp({
+      target: address,
+      data: [callTo, callData],
+    });
+
+    const chainId = await smartAccount.provider
+      .getNetwork()
+      .then((net) => net.chainId);
+    const client = new HttpRpcClient(rpcUrl, entryPointAddress, chainId);
+    const userOpHash = await client.sendUserOpToBundler(op);
+
+    console.log("Waiting for transaction...");
+    const transactionHash = await smartAccount.getUserOpReceipt(userOpHash);
+    console.log(`Transaction hash: ${transactionHash}`);
     await updateUSDTBalance();
     setBatchLoading(false);
     setTransactionLogs((items) => {
       const newItems = [...items]
-      if (userOp?.userOpHash && result?.transactionHash) {
-        newItems.unshift({
-          userOpHash: userOp?.userOpHash,
-          transactionHash: `${result?.transactionHash}`
-        })
-        localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
-      }
-
-      
+      newItems.unshift({
+        userOpHash: userOpHash,
+        transactionHash: `${transactionHash}`
+      })
+      localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
       return newItems;
     })
    
@@ -662,38 +653,7 @@ function Demo() {
       setTransactionLogs(JSON.parse(TransactionLogs))
     }
   }, []);
-  const code = ` const TestnetERC20 = new ethers.Contract(
-      TestUSDT,
-      TestnetERC20ABI,
-      
-    );
 
-    const callTo = mintList.map(() => {
-      return TestUSDT
-    });
-    const callData = mintList.map((item) => {
-      return  TestnetERC20.interface.encodeFunctionData("_mint", [
-        item.account,
-        ethers.utils.parseUnits(item.amount ? item.amount : "0", 6),
-      ])
-    })
-
-    const smartAccount = new SmartAccount({
-      bundler: {
-        provider: "${bundler.includes("stackup") ? "stackup": bundler.includes("pimlico") ? "pimlico" : "zerodev" }",
-        config: {
-          url: "${bundler}"
-        }
-      },
-      paymaster: {
-        provider: "${payMaster.includes("stackup") ? "stackup": payMaster.includes("pimlico") ? "pimlico" : "zerodev" }",
-        config: {
-          url: "${payMaster}"
-        }
-      }
-    })
-    const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
-    const result = await userOp?.wait(); `
   return (
     <div className={styles.root}>
       {/* <div>EOA Account: {currentWalletAddress}</div>
@@ -707,7 +667,7 @@ function Demo() {
           }}>
             <MenuItem value={"https://public.stackup.sh/api/v1/node/ethereum-sepolia"}>Stackup</MenuItem>
             <MenuItem value={"https://api.pimlico.io/v2/11155111/rpc?apikey=7dc438e7-8de7-47f0-9d71-3372e57694ca"}>Pimlico</MenuItem>
-            <MenuItem value={"https://rpc.zerodev.app/api/v2/bundler/1d0e8ee2-84e0-4b5b-852b-d57b6573a627"}>ZeroDev</MenuItem>
+         
           </Select>
         </FormControl>
         <FormControl fullWidth>
@@ -717,8 +677,7 @@ function Demo() {
           }}>
             <MenuItem value={"https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"}>Stackup</MenuItem>
             <MenuItem value={"https://api.pimlico.io/v2/11155111/rpc?apikey=7dc438e7-8de7-47f0-9d71-3372e57694ca"}>Pimlico</MenuItem>
-            <MenuItem value={"https://rpc.zerodev.app/api/v2/paymaster/1d0e8ee2-84e0-4b5b-852b-d57b6573a627"}>ZeroDev</MenuItem>
-            <MenuItem value={"111"}>AAStar</MenuItem>
+            <MenuItem value={"https://paymaster.aastar.io/api/v1/paymaster/ethereum-sepolia?apiKey=fe6017a4-9e13-4750-ae69-a7568f633eb5"}>AAStar</MenuItem>
           </Select>
         </FormControl>
       </div>
@@ -784,7 +743,6 @@ function Demo() {
           );
         })}
       </div>
-      <SyntaxHighlighter language="javascript" style={dark}>{code}</SyntaxHighlighter>
       <div className={styles.batchMintUsdtBtn}>
         <LoadingButton
           loading={batchLoading}
