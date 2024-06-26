@@ -34,7 +34,7 @@ export class PimlicoPayMasterAPI extends PaymasterAPI {
       userOp: Partial<UserOperationStruct>
     ): Promise<string> {
     
-      console.log("op", "getPaymasterAndData")
+      
       // Hack: userOp includes empty paymasterAndData which calcPreVerificationGas requires.
       // try {
       //   // userOp.preVerificationGas contains a promise that will resolve to an error.
@@ -59,11 +59,13 @@ export class PimlicoPayMasterAPI extends PaymasterAPI {
       op.verificationGasLimit = ethers.BigNumber.from(op.verificationGasLimit).mul(3);
   
       // Ask the paymaster to sign the transaction and return a valid paymasterAndData value.
-      console.log("op", op,  this.entryPoint)
+     
       const params = [await OptoJSON(op), this.entryPoint];
       const provider = new ethers.providers.StaticJsonRpcProvider(this.paymasterUrl);
+      console.log("PimlicoPayMaster", this.paymasterUrl, "pm_sponsorUserOperation start", params)
       const response = await provider.send("pm_sponsorUserOperation", params);
-      console.log("getPaymasterAndData", response)
+      console.log("PimlicoPayMaster", this.paymasterUrl, "pm_sponsorUserOperation complete", response)
+     
       return response
     }
   }

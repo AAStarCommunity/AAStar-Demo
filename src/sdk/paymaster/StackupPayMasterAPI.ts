@@ -59,11 +59,12 @@ export class StackupPayMasterAPI extends PaymasterAPI {
       op.verificationGasLimit = ethers.BigNumber.from(op.verificationGasLimit).mul(3);
   
       // Ask the paymaster to sign the transaction and return a valid paymasterAndData value.
-      console.log("op", op,  this.entryPoint)
+     
       const params = [await OptoJSON(op), this.entryPoint, {"type": "payg"}];
-      const provider = new ethers.providers.JsonRpcProvider(this.paymasterUrl);
+      const provider = new ethers.providers.StaticJsonRpcProvider(this.paymasterUrl);
+      console.log("StackupPayMaster", this.paymasterUrl, "pm_sponsorUserOperation start", params)
       const response = await provider.send("pm_sponsorUserOperation", params);
-      console.log("getPaymasterAndData", response)
+      console.log("StackupPayMaster", this.paymasterUrl, "pm_sponsorUserOperation complete", response)
       return response
     }
   }

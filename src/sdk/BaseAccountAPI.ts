@@ -240,7 +240,6 @@ export abstract class BaseAccountAPI {
    * @param info
    */
   async createUnsignedUserOp (info: TransactionDetailsForUserOp): Promise<UserOperationStruct> {
-    console.log("initCode", "createUnsignedUserOp")
     const {
       callData,
       callGasLimit

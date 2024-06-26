@@ -7,7 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { StackupPayMasterAPI } from "./sdk/paymaster/StackupPayMasterAPI";
 import { LoadingButton } from "@mui/lab";
 import { FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
-import _ from "lodash";
+import _, { add } from "lodash";
 import { AAStarPayMasterAPI } from "./sdk/paymaster/AAStarPayMasterAPI";
 import { PimlicoPayMasterAPI } from "./sdk/paymaster/PimlicoPayMasterAPI";
 import { ToastContainer, toast } from 'react-toastify';
@@ -448,7 +448,7 @@ const getSimpleAccount = (
   paymasterUrl: string
 ) => {
   const accountAPI = new SimpleAccountAPI({
-    provider: new ethers.providers.JsonRpcProvider(bundlerUrl),
+    provider: new ethers.providers.JsonRpcProvider(ethereumSepoliaRpcUrl),
     entryPointAddress,
     owner: wallet,
     factoryAddress,
@@ -541,19 +541,18 @@ function Demo() {
     }
   };
   const mintUSDT = async (data: MintItem) => {
-    const id = toast.loading("Please wait...", {
-      autoClose: 5000,
-    })
+    const id = toast.loading("Please wait...")
     //do something else
     try {
       const wallet = getWallet();
       const smartAccount = getSimpleAccount(wallet, bundler, payMaster);
       const address = await smartAccount.getCounterFactualAddress();
+      console.log("mintUSDT", address)
       // const smartAccountContract = await smartAccount._getAccountContract();
       const TestnetERC20 = new ethers.Contract(
         TestUSDT,
         TestnetERC20ABI,
-        smartAccount.provider
+        new ethers.providers.JsonRpcProvider(ethereumSepoliaRpcUrl)
       );
       // Encode the calls
       const callTo = [TestUSDT];
@@ -573,13 +572,13 @@ function Demo() {
       const chainId = await smartAccount.provider
         .getNetwork()
         .then((net) => net.chainId);
-      const client = new HttpRpcClient(rpcUrl, entryPointAddress, chainId);
+      const client = new HttpRpcClient(bundler, entryPointAddress, chainId);
       const userOpHash = await client.sendUserOpToBundler(op);
   
       console.log("Waiting for transaction...");
       const transactionHash = await smartAccount.getUserOpReceipt(userOpHash);
       console.log(`Transaction hash: ${transactionHash}`);
-      toast.update(id, { render: "Success", type: "success", isLoading: false });
+      toast.update(id, { render: "Success", type: "success", isLoading: false, autoClose: 5000 });
       await updateUSDTBalance();
       setMintList((items) => {
         const newItems = [...items];
@@ -603,7 +602,7 @@ function Demo() {
       })
     }
     catch(error) {
-      toast.update(id, { render: "Transaction Fail", type: "error", isLoading: false });
+      toast.update(id, { render: "Transaction Fail", type: "error", isLoading: false, autoClose: 5000 });
     }
    
     //console.log(`View here: https://jiffyscan.xyz/userOpHash/${userOpHash}`);
