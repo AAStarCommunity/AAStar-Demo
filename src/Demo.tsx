@@ -7,10 +7,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import { StackupPayMasterAPI } from "./sdk/paymaster/StackupPayMasterAPI";
 import { LoadingButton } from "@mui/lab";
 import { FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
-import _, { add } from "lodash";
+import _ from "lodash";
 import { AAStarPayMasterAPI } from "./sdk/paymaster/AAStarPayMasterAPI";
 import { PimlicoPayMasterAPI } from "./sdk/paymaster/PimlicoPayMasterAPI";
 import { ToastContainer, toast } from 'react-toastify';
+import { BiconomyPayMasterAPI } from "./sdk/paymaster/BiconomyPayMasterAPI";
 
  
 const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
@@ -455,7 +456,11 @@ const getSimpleAccount = (
     paymasterAPI:
       paymasterUrl.indexOf("aastar") >= 0
         ? new AAStarPayMasterAPI(paymasterUrl, entryPointAddress)
-        : paymasterUrl.indexOf("pimlico") >= 0 ? new PimlicoPayMasterAPI(paymasterUrl, entryPointAddress) : new StackupPayMasterAPI(paymasterUrl, entryPointAddress),
+        : paymasterUrl.indexOf("pimlico") >= 0
+        ? new PimlicoPayMasterAPI(paymasterUrl, entryPointAddress)
+        : paymasterUrl.indexOf("biconomy") >= 0
+        ? new BiconomyPayMasterAPI(paymasterUrl, entryPointAddress)
+        : new StackupPayMasterAPI(paymasterUrl, entryPointAddress),
   });
   return accountAPI;
 };
@@ -602,6 +607,7 @@ function Demo() {
       })
     }
     catch(error) {
+      console.log(error);
       toast.update(id, { render: "Transaction Fail", type: "error", isLoading: false, autoClose: 5000 });
     }
    
@@ -702,6 +708,15 @@ function Demo() {
             >
               Pimlico
             </MenuItem>
+            <MenuItem
+              value={
+                "https://bundler.biconomy.io/api/v2/11155111/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44"
+              }
+            >
+              Biconomy
+            </MenuItem>
+
+            
           </Select>
         </FormControl>
         <FormControl fullWidth>
@@ -734,6 +749,13 @@ function Demo() {
               }
             >
               AAStar
+            </MenuItem>
+            <MenuItem
+              value={
+                "https://paymaster.biconomy.io/api/v1/11155111/sbA6OmcPO.016e1abd-0db6-4909-a806-175f617f1cb9"
+              }
+            >
+              Biconomy
             </MenuItem>
           </Select>
         </FormControl>
