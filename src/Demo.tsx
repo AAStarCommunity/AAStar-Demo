@@ -1,22 +1,23 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
-import { SimpleAccountAPI } from "./sdk";
+import { HttpRpcClient, SimpleAccountAPI } from "./sdk";
 import styles from "./Demo.module.css";
-import { StackupPayMasterAPI } from "./sdk/StackupPayMasterAPI";
+import 'react-toastify/dist/ReactToastify.css';
+import { StackupPayMasterAPI } from "./sdk/paymaster/StackupPayMasterAPI";
 import { LoadingButton } from "@mui/lab";
 import { FormControl, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from "@mui/material";
 import _ from "lodash";
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { SmartAccount } from "./sdk/AAStarAccount";
+import { AAStarPayMasterAPI } from "./sdk/paymaster/AAStarPayMasterAPI";
+import { PimlicoPayMasterAPI } from "./sdk/paymaster/PimlicoPayMasterAPI";
+import { ToastContainer, toast } from 'react-toastify';
+import { BiconomyPayMasterAPI } from "./sdk/paymaster/BiconomyPayMasterAPI";
+
+ 
 const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
 const factoryAddress = "0x9406Cc6185a346906296840746125a0E44976454";
-// const rpcUrl = "https://public.stackup.sh/api/v1/node/ethereum-sepolia";
-// const paymasterUrl =
-//   "https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"; // Optional - you can get one at https://app.stackup.sh/
+const ethereumSepoliaRpcUrl = "https://public.stackup.sh/api/v1/node/ethereum-sepolia";
 
 const TestnetERC20ABI = [
   {
@@ -442,13 +443,24 @@ const getWallet = () => {
   return signer;
 };
 
-const getSimpleAccount = (wallet: ethers.Wallet, bundlerUrl: string, paymasterUrl: string) => {
+const getSimpleAccount = (
+  wallet: ethers.Wallet,
+  bundlerUrl: string,
+  paymasterUrl: string
+) => {
   const accountAPI = new SimpleAccountAPI({
-    provider: new ethers.providers.JsonRpcProvider(bundlerUrl),
+    provider: new ethers.providers.JsonRpcProvider(ethereumSepoliaRpcUrl),
     entryPointAddress,
     owner: wallet,
     factoryAddress,
-    paymasterAPI: new StackupPayMasterAPI(paymasterUrl, entryPointAddress),
+    paymasterAPI:
+      paymasterUrl.indexOf("aastar") >= 0
+        ? new AAStarPayMasterAPI(paymasterUrl, entryPointAddress)
+        : paymasterUrl.indexOf("pimlico") >= 0
+        ? new PimlicoPayMasterAPI(paymasterUrl, entryPointAddress)
+        : paymasterUrl.indexOf("biconomy") >= 0
+        ? new BiconomyPayMasterAPI(paymasterUrl, entryPointAddress)
+        : new StackupPayMasterAPI(paymasterUrl, entryPointAddress),
   });
   return accountAPI;
 };
@@ -471,24 +483,24 @@ function Demo() {
   const [payMaster, setPayMaseter] = useState("https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba");
   const [batchLoading, setBatchLoading] = useState(false);
   const [mintList, setMintList] = useState<MintItem[]>([
-    {
-      account: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      amount: null,
-      balance: null,
-      mintBtnText: "Mint USDT"
-    },
-    {
-      account: "0x6Ecbe1DB9EF729CBe972C83Fb886247691Fb6beb",
-      amount: null,
-      balance: null,
-      mintBtnText: "Mint USDT"
-    },
-    {
-      account: "0x5409ED021D9299bf6814279A6A1411A7e866A631",
-      amount: null,
-      balance: null,
-      mintBtnText: "Mint USDT"
-    },
+    // {
+    //   account: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    //   amount: null,
+    //   balance: null,
+    //   mintBtnText: "Mint USDT"
+    // },
+    // {
+    //   account: "0x6Ecbe1DB9EF729CBe972C83Fb886247691Fb6beb",
+    //   amount: null,
+    //   balance: null,
+    //   mintBtnText: "Mint USDT"
+    // },
+    // {
+    //   account: "0x5409ED021D9299bf6814279A6A1411A7e866A631",
+    //   amount: null,
+    //   balance: null,
+    //   mintBtnText: "Mint USDT"
+    // },
     {
       account: "0x47E51256Fc9C7e87fd23b3444091D7A877C919B4",
       amount: null,
@@ -496,11 +508,11 @@ function Demo() {
       mintBtnText: "Mint USDT"
     },
   ]);
-  const [, setCurrentWalletAddress] = useState<string>(
+  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>(
     ethers.constants.AddressZero
   );
   //  const [currentSmartAccount, setCurrentSmartAccount] = useState<BaseAccountAPI | null>(null)
-  const [, setCurrentSmartAccountAddress] =
+  const [currentSmartAccountAddress, setCurrentSmartAccountAddress] =
     useState<string>(ethers.constants.AddressZero);
   useEffect(() => {
     const init = async () => {
@@ -514,10 +526,11 @@ function Demo() {
     init();
   }, []);
   const updateUSDTBalance = async () => {
+
     const TestnetERC20 = new ethers.Contract(
       TestUSDT,
       TestnetERC20ABI,
-      new ethers.providers.JsonRpcProvider(bundler)
+      new ethers.providers.JsonRpcProvider(ethereumSepoliaRpcUrl)
     );
     for (let i = 0, l = mintList.length; i < l; i++) {
       TestnetERC20.balanceOf(mintList[i].account).then(
@@ -533,127 +546,125 @@ function Demo() {
     }
   };
   const mintUSDT = async (data: MintItem) => {
-    const wallet = getWallet();
-  
-    // const smartAccountContract = await smartAccount._getAccountContract();
-    const TestnetERC20 = new ethers.Contract(
-      TestUSDT,
-      TestnetERC20ABI,
-    
-    );
-    // Encode the calls
-    const callTo = [TestUSDT];
-    const callData = [
-      TestnetERC20.interface.encodeFunctionData("_mint", [
-        data.account,
-        ethers.utils.parseUnits(data.amount ? data.amount : "0", 6),
-      ]),
-    ];
-    // const encodeCallData = smartAccountContract.interface.encodeFunctionData("executeBatch", [callTo, callData]);
-    //console.log([callTo, callData], encodeCallData)
-    const smartAccount = new SmartAccount({
-      bundler: {
-        provider: bundler.includes("stackup") ? "stackup": bundler.includes("pimlico") ? "pimlico" : "zerodev" ,
-        config: {
-          url: bundler
-        }
-      },
-      paymaster: {
-        provider:  payMaster.includes("stackup") ? "stackup": bundler.includes("stackup") ? "pimlico" : "zerodev" ,
-        config: {
-          url: payMaster
-        }
-      }
-    })
-    const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
-    console.log("Waiting for transaction..." + userOp?.userOpHash);
-    const result = await userOp?.wait()
-    console.log(`Transaction hash: ${result?.transactionHash}`);
-    await updateUSDTBalance();
-    setMintList((items) => {
-      const newItems = [...items];
-      const newItem: any = _.find(newItems, (mintItem: any) => {
-        return mintItem.account === data.account;
+    const id = toast.loading("Please wait...")
+    //do something else
+    try {
+      const wallet = getWallet();
+      const smartAccount = getSimpleAccount(wallet, bundler, payMaster);
+      const address = await smartAccount.getCounterFactualAddress();
+      console.log("mintUSDT", address)
+      // const smartAccountContract = await smartAccount._getAccountContract();
+      const TestnetERC20 = new ethers.Contract(
+        TestUSDT,
+        TestnetERC20ABI,
+        new ethers.providers.JsonRpcProvider(ethereumSepoliaRpcUrl)
+      );
+      // Encode the calls
+      const callTo = [TestUSDT];
+      const callData = [
+        TestnetERC20.interface.encodeFunctionData("_mint", [
+          data.account,
+          ethers.utils.parseUnits(data.amount ? data.amount : "0", 6),
+        ]),
+      ];
+      // const encodeCallData = smartAccountContract.interface.encodeFunctionData("executeBatch", [callTo, callData]);
+      //console.log([callTo, callData], encodeCallData)
+      const op = await smartAccount.createSignedUserOp({
+        target: address,
+        data: [callTo, callData],
       });
-      if (newItem) {
-        newItem.loading = false;
-        newItem.mintBtnText = "Mint USDT"
-      }
-      return newItems;
-    });
-    setTransactionLogs((items) => {
-      const newItems = [...items]
-      if (userOp?.userOpHash && result?.transactionHash) {
+  
+      const chainId = await smartAccount.provider
+        .getNetwork()
+        .then((net) => net.chainId);
+      const client = new HttpRpcClient(bundler, entryPointAddress, chainId);
+      const userOpHash = await client.sendUserOpToBundler(op);
+  
+      console.log("Waiting for transaction...");
+      const transactionHash = await smartAccount.getUserOpReceipt(userOpHash);
+      console.log(`Transaction hash: ${transactionHash}`);
+      toast.update(id, { render: "Success", type: "success", isLoading: false, autoClose: 5000 });
+      await updateUSDTBalance();
+      setMintList((items) => {
+        const newItems = [...items];
+        const newItem: any = _.find(newItems, (mintItem: any) => {
+          return mintItem.account === data.account;
+        });
+        if (newItem) {
+          newItem.loading = false;
+          newItem.mintBtnText = "Mint USDT"
+        }
+        return newItems;
+      });
+      setTransactionLogs((items) => {
+        const newItems = [...items]
         newItems.unshift({
-          userOpHash: userOp?.userOpHash,
-          transactionHash: `${result?.transactionHash}`
+          userOpHash: userOpHash,
+          transactionHash: `${transactionHash}`
         })
         localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
-      }
-
-      return newItems;
-    })
-    //console.log(`View here: https://jiffyscan.xyz/userOpHash/${userOpHash}`);
-  };
-  const batchMintUSDT = async () => {
-    setBatchLoading(true);
-    const wallet = getWallet();
-
-    // const smartAccountContract = await smartAccount._getAccountContract();
-    const TestnetERC20 = new ethers.Contract(
-      TestUSDT,
-      TestnetERC20ABI,
-      
-    );
-    // Encode the calls
-
-    const callTo = mintList.map(() => {
-      return TestUSDT
-    });
-    const callData = mintList.map((item) => {
-      return  TestnetERC20.interface.encodeFunctionData("_mint", [
-        item.account,
-        ethers.utils.parseUnits(item.amount ? item.amount : "0", 6),
-      ])
-    })
-    // const encodeCallData = smartAccountContract.interface.encodeFunctionData("executeBatch", [callTo, callData]);
-    //console.log([callTo, callData], encodeCallData)
-    const smartAccount = new SmartAccount({
-      bundler: {
-        provider: "stackup",
-        config: {
-          url: bundler
-        }
-      },
-      paymaster: {
-        provider: "stackup",
-        config: {
-          url: payMaster
-        }
-      }
-    })
-    const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
-    console.log("Waiting for transaction..." + userOp?.userOpHash);
-    const result = await userOp?.wait()
-    console.log(`Transaction hash: ${result?.transactionHash}`);
-    await updateUSDTBalance();
-    setBatchLoading(false);
-    setTransactionLogs((items) => {
-      const newItems = [...items]
-      if (userOp?.userOpHash && result?.transactionHash) {
-        newItems.unshift({
-          userOpHash: userOp?.userOpHash,
-          transactionHash: `${result?.transactionHash}`
-        })
-        localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
-      }
-
-      
-      return newItems;
-    })
+        return newItems;
+      })
+    }
+    catch(error) {
+      console.log(error);
+      toast.update(id, { render: "Transaction Fail", type: "error", isLoading: false, autoClose: 5000 });
+    }
    
     //console.log(`View here: https://jiffyscan.xyz/userOpHash/${userOpHash}`);
   };
+  // const batchMintUSDT = async () => {
+  //   setBatchLoading(true);
+  //   const wallet = getWallet();
+  //   const smartAccount = getSimpleAccount(wallet, bundler, payMaster);
+  //   const address = await smartAccount.getCounterFactualAddress();
+  //   // const smartAccountContract = await smartAccount._getAccountContract();
+  //   const TestnetERC20 = new ethers.Contract(
+  //     TestUSDT,
+  //     TestnetERC20ABI,
+  //     smartAccount.provider
+  //   );
+  //   // Encode the calls
+
+  //   const callTo = mintList.map(() => {
+  //     return TestUSDT
+  //   });
+  //   const callData = mintList.map((item) => {
+  //     return  TestnetERC20.interface.encodeFunctionData("_mint", [
+  //       item.account,
+  //       ethers.utils.parseUnits(item.amount ? item.amount : "0", 6),
+  //     ])
+  //   })
+  //   // const encodeCallData = smartAccountContract.interface.encodeFunctionData("executeBatch", [callTo, callData]);
+  //   //console.log([callTo, callData], encodeCallData)
+  //   const op = await smartAccount.createSignedUserOp({
+  //     target: address,
+  //     data: [callTo, callData],
+  //   });
+
+  //   const chainId = await smartAccount.provider
+  //     .getNetwork()
+  //     .then((net) => net.chainId);
+  //   const client = new HttpRpcClient(rpcUrl, entryPointAddress, chainId);
+  //   const userOpHash = await client.sendUserOpToBundler(op);
+
+  //   console.log("Waiting for transaction...");
+  //   const transactionHash = await smartAccount.getUserOpReceipt(userOpHash);
+  //   console.log(`Transaction hash: ${transactionHash}`);
+  //   await updateUSDTBalance();
+  //   setBatchLoading(false);
+  //   setTransactionLogs((items) => {
+  //     const newItems = [...items]
+  //     newItems.unshift({
+  //       userOpHash: userOpHash,
+  //       transactionHash: `${transactionHash}`
+  //     })
+  //     localStorage.setItem("TransactionLogs", JSON.stringify(newItems))
+  //     return newItems;
+  //   })
+   
+  //   //console.log(`View here: https://jiffyscan.xyz/userOpHash/${userOpHash}`);
+  // };
   
   useEffect(() => {
     updateUSDTBalance();
@@ -662,63 +673,90 @@ function Demo() {
       setTransactionLogs(JSON.parse(TransactionLogs))
     }
   }, []);
-  const code = ` const TestnetERC20 = new ethers.Contract(
-      TestUSDT,
-      TestnetERC20ABI,
-      
-    );
 
-    const callTo = mintList.map(() => {
-      return TestUSDT
-    });
-    const callData = mintList.map((item) => {
-      return  TestnetERC20.interface.encodeFunctionData("_mint", [
-        item.account,
-        ethers.utils.parseUnits(item.amount ? item.amount : "0", 6),
-      ])
-    })
-
-    const smartAccount = new SmartAccount({
-      bundler: {
-        provider: "${bundler.includes("stackup") ? "stackup": bundler.includes("pimlico") ? "pimlico" : "zerodev" }",
-        config: {
-          url: "${bundler}"
-        }
-      },
-      paymaster: {
-        provider: "${payMaster.includes("stackup") ? "stackup": payMaster.includes("pimlico") ? "pimlico" : "zerodev" }",
-        config: {
-          url: "${payMaster}"
-        }
-      }
-    })
-    const userOp = await smartAccount.sendUserOperation(wallet, callTo, callData);
-    const result = await userOp?.wait(); `
   return (
     <div className={styles.root}>
       {/* <div>EOA Account: {currentWalletAddress}</div>
       <div>Smart Account: {currentSmartAccountAddress}</div> */}
-      <a className={styles.contractLink} href="https://sepolia.etherscan.io/address/0x7169d38820dfd117c3fa1f22a697dba58d90ba06" target="_blank">Contract : {TestUSDT}</a>
+      <a
+        className={styles.contractLink}
+        href="https://sepolia.etherscan.io/address/0x7169d38820dfd117c3fa1f22a697dba58d90ba06"
+        target="_blank"
+      >
+        Contract : {TestUSDT}
+      </a>
       <div className={styles.selectRow}>
         <FormControl fullWidth>
           <InputLabel id="bundler-label">Bundler</InputLabel>
-          <Select labelId="bundler-label" label="Bundler" value={bundler} onChange={(event) => {
-            setBundler(event.target.value as string);
-          }}>
-            <MenuItem value={"https://public.stackup.sh/api/v1/node/ethereum-sepolia"}>Stackup</MenuItem>
-            <MenuItem value={"https://api.pimlico.io/v2/11155111/rpc?apikey=7dc438e7-8de7-47f0-9d71-3372e57694ca"}>Pimlico</MenuItem>
-            <MenuItem value={"https://rpc.zerodev.app/api/v2/bundler/1d0e8ee2-84e0-4b5b-852b-d57b6573a627"}>ZeroDev</MenuItem>
+          <Select
+            labelId="bundler-label"
+            label="Bundler"
+            value={bundler}
+            onChange={(event) => {
+              setBundler(event.target.value as string);
+            }}
+          >
+            <MenuItem
+              value={"https://public.stackup.sh/api/v1/node/ethereum-sepolia"}
+            >
+              Stackup
+            </MenuItem>
+            <MenuItem
+              value={
+                "https://api.pimlico.io/v2/11155111/rpc?apikey=7dc438e7-8de7-47f0-9d71-3372e57694ca"
+              }
+            >
+              Pimlico
+            </MenuItem>
+            <MenuItem
+              value={
+                "https://bundler.biconomy.io/api/v2/11155111/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44"
+              }
+            >
+              Biconomy
+            </MenuItem>
+
+            
           </Select>
         </FormControl>
         <FormControl fullWidth>
           <InputLabel id="paymaster-label">Paymaster</InputLabel>
-          <Select labelId="paymaster-label" label="Paymaster"  value={payMaster} onChange={(event) => {
-            setPayMaseter(event.target.value as string);
-          }}>
-            <MenuItem value={"https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"}>Stackup</MenuItem>
-            <MenuItem value={"https://api.pimlico.io/v2/11155111/rpc?apikey=7dc438e7-8de7-47f0-9d71-3372e57694ca"}>Pimlico</MenuItem>
-            <MenuItem value={"https://rpc.zerodev.app/api/v2/paymaster/1d0e8ee2-84e0-4b5b-852b-d57b6573a627"}>ZeroDev</MenuItem>
-            <MenuItem value={"111"}>AAStar</MenuItem>
+          <Select
+            labelId="paymaster-label"
+            label="Paymaster"
+            value={payMaster}
+            onChange={(event) => {
+              setPayMaseter(event.target.value as string);
+            }}
+          >
+            <MenuItem
+              value={
+                "https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba"
+              }
+            >
+              Stackup
+            </MenuItem>
+            <MenuItem
+              value={
+                "https://api.pimlico.io/v2/11155111/rpc?apikey=7dc438e7-8de7-47f0-9d71-3372e57694ca"
+              }
+            >
+              Pimlico
+            </MenuItem>
+            <MenuItem
+              value={
+                "https://paymaster.aastar.io/api/v1/paymaster/ethereum-sepolia?apiKey=fe6017a4-9e13-4750-ae69-a7568f633eb5"
+              }
+            >
+              AAStar
+            </MenuItem>
+            <MenuItem
+              value={
+                "https://paymaster.biconomy.io/api/v1/11155111/sbA6OmcPO.016e1abd-0db6-4909-a806-175f617f1cb9"
+              }
+            >
+              Biconomy
+            </MenuItem>
           </Select>
         </FormControl>
       </div>
@@ -784,8 +822,7 @@ function Demo() {
           );
         })}
       </div>
-      <SyntaxHighlighter language="javascript" style={dark}>{code}</SyntaxHighlighter>
-      <div className={styles.batchMintUsdtBtn}>
+      {/* <div className={styles.batchMintUsdtBtn}>
         <LoadingButton
           loading={batchLoading}
           size="large"
@@ -796,32 +833,39 @@ function Demo() {
         >
           Batch Mint USDT
         </LoadingButton>
+      </div> */}
+      <div className={styles.TransactionTable}>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>User Op Hash</TableCell>
+                <TableCell>Transaction</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactionLogs.map((row) => (
+                <TableRow
+                  key={row.userOpHash}
+                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                >
+                  <TableCell>{row.userOpHash}</TableCell>
+                  <TableCell>
+                    {" "}
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${row.transactionHash}`}
+                      target="_blank"
+                    >
+                      {row.transactionHash}
+                    </a>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
-      <TableContainer component={Paper}>
-      <Table size="small" >
-        <TableHead>
-          <TableRow>
-            <TableCell>User Op Hash</TableCell>
-            <TableCell>Transaction</TableCell>
-         
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {transactionLogs.map((row) => (
-            <TableRow
-              key={row.userOpHash}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell >
-                {row.userOpHash}
-              </TableCell>
-              <TableCell > <a href={`https://sepolia.etherscan.io/tx/${row.transactionHash}`} target="_blank">{row.transactionHash}</a></TableCell>
-            
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+      <ToastContainer />
     </div>
   );
 }

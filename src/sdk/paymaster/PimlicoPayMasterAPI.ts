@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { UserOperationStruct } from "@account-abstraction/contracts";
-import { PaymasterAPI } from "./PaymasterAPI";
+import { PaymasterAPI } from "../PaymasterAPI";
 import { ethers } from "ethers";
-import { calcPreVerificationGas } from "./calcPreVerificationGas";
+import { calcPreVerificationGas } from "../calcPreVerificationGas";
 async function OptoJSON(op: Partial<UserOperationStruct>): Promise<any> {
     const userOp = await ethers.utils.resolveProperties(op);
     return Object.keys(userOp)
@@ -21,12 +21,11 @@ async function OptoJSON(op: Partial<UserOperationStruct>): Promise<any> {
             {}
         );
 }
-export class StackupPayMasterAPI extends PaymasterAPI {
+export class PimlicoPayMasterAPI extends PaymasterAPI {
     private paymasterUrl: string;
     private entryPoint: string;
     constructor(paymasterUrl: string, entryPoint: string) {
       super();
-     console.log("StackupPayMasterAPI")
       this.paymasterUrl = paymasterUrl;
       this.entryPoint = entryPoint;
     }
@@ -35,7 +34,7 @@ export class StackupPayMasterAPI extends PaymasterAPI {
       userOp: Partial<UserOperationStruct>
     ): Promise<string> {
     
-      console.log("op", "getPaymasterAndData")
+      
       // Hack: userOp includes empty paymasterAndData which calcPreVerificationGas requires.
       // try {
       //   // userOp.preVerificationGas contains a promise that will resolve to an error.
@@ -60,11 +59,13 @@ export class StackupPayMasterAPI extends PaymasterAPI {
       op.verificationGasLimit = ethers.BigNumber.from(op.verificationGasLimit).mul(3);
   
       // Ask the paymaster to sign the transaction and return a valid paymasterAndData value.
-      console.log("op", op,  this.entryPoint)
-      const params = [await OptoJSON(op), this.entryPoint, {"type": "payg"}];
-      const provider = new ethers.providers.JsonRpcProvider(this.paymasterUrl);
+     
+      const params = [await OptoJSON(op), this.entryPoint];
+      const provider = new ethers.providers.StaticJsonRpcProvider(this.paymasterUrl);
+      console.log("PimlicoPayMaster", this.paymasterUrl, "pm_sponsorUserOperation start", params)
       const response = await provider.send("pm_sponsorUserOperation", params);
-      console.log("getPaymasterAndData", response)
+      console.log("PimlicoPayMaster", this.paymasterUrl, "pm_sponsorUserOperation complete", response)
+     
       return response
     }
   }

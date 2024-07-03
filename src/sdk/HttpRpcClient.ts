@@ -43,8 +43,11 @@ export class HttpRpcClient {
     const hexifiedUserOp = deepHexlify(await resolveProperties(userOp1))
     const jsonRequestData: [UserOperationStruct, string] = [hexifiedUserOp, this.entryPointAddress]
     await this.printUserOperation('eth_sendUserOperation', jsonRequestData)
-    return await this.userOpJsonRpcProvider
-      .send('eth_sendUserOperation', [hexifiedUserOp, this.entryPointAddress])
+    console.log("bundler", this.bundlerUrl, "eth_sendUserOperation start", jsonRequestData)
+    const response = await this.userOpJsonRpcProvider
+    .send('eth_sendUserOperation', [hexifiedUserOp, this.entryPointAddress])
+    console.log("bundler", this.bundlerUrl, "eth_sendUserOperation end", jsonRequestData)
+    return response
   }
 
   /**
