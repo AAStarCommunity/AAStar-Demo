@@ -445,7 +445,6 @@ const getWallet = () => {
 
 const getSimpleAccount = (
   wallet: ethers.Wallet,
-  bundlerUrl: string,
   paymasterUrl: string
 ) => {
   const accountAPI = new SimpleAccountAPI({
@@ -481,7 +480,7 @@ function Demo() {
   const [transactionLogs, setTransactionLogs] = useState<TransactionLog[]>([])
   const [bundler, setBundler] = useState("https://public.stackup.sh/api/v1/node/ethereum-sepolia");
   const [payMaster, setPayMaseter] = useState("https://api.stackup.sh/v1/paymaster/e008121e92221cb49073b5bca65d434fbeb2162e73f42a9e3ea01d00b606fcba");
-  const [batchLoading, setBatchLoading] = useState(false);
+ // const [batchLoading, setBatchLoading] = useState(false);
   const [mintList, setMintList] = useState<MintItem[]>([
     // {
     //   account: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -508,23 +507,23 @@ function Demo() {
       mintBtnText: "Mint USDT"
     },
   ]);
-  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>(
-    ethers.constants.AddressZero
-  );
-  //  const [currentSmartAccount, setCurrentSmartAccount] = useState<BaseAccountAPI | null>(null)
-  const [currentSmartAccountAddress, setCurrentSmartAccountAddress] =
-    useState<string>(ethers.constants.AddressZero);
-  useEffect(() => {
-    const init = async () => {
-      const wallet = getWallet();
-      setCurrentWalletAddress(wallet.address);
-      const simpleAccount = getSimpleAccount(wallet, bundler, payMaster);
-      // setCurrentSmartAccount(accountAPI);
-      const smartAddress = await simpleAccount.getCounterFactualAddress();
-      setCurrentSmartAccountAddress(smartAddress);
-    };
-    init();
-  }, []);
+  // const [currentWalletAddress, setCurrentWalletAddress] = useState<string>(
+  //   ethers.constants.AddressZero
+  // );
+  // //  const [currentSmartAccount, setCurrentSmartAccount] = useState<BaseAccountAPI | null>(null)
+  // const [currentSmartAccountAddress, setCurrentSmartAccountAddress] =
+  //   useState<string>(ethers.constants.AddressZero);
+  // useEffect(() => {
+  //   const init = async () => {
+  //     const wallet = getWallet();
+  //   //  setCurrentWalletAddress(wallet.address);
+  //     const simpleAccount = getSimpleAccount(wallet, payMaster);
+  //     // setCurrentSmartAccount(accountAPI);
+  //     const smartAddress = await simpleAccount.getCounterFactualAddress();
+  //   //  setCurrentSmartAccountAddress(smartAddress);
+  //   };
+  //   init();
+  // }, []);
   const updateUSDTBalance = async () => {
 
     const TestnetERC20 = new ethers.Contract(
@@ -550,7 +549,7 @@ function Demo() {
     //do something else
     try {
       const wallet = getWallet();
-      const smartAccount = getSimpleAccount(wallet, bundler, payMaster);
+      const smartAccount = getSimpleAccount(wallet, payMaster);
       const address = await smartAccount.getCounterFactualAddress();
       console.log("mintUSDT", address)
       // const smartAccountContract = await smartAccount._getAccountContract();
