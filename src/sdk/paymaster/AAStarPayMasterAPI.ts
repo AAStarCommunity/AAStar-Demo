@@ -23,12 +23,13 @@ async function OptoJSON(op: Partial<UserOperationStruct>): Promise<any> {
 }
 export class AAStarPayMasterAPI extends PaymasterAPI {
   private paymasterUrl: string;
-  private entryPoint: string;
-  constructor(paymasterUrl: string, entryPoint: string) {
+  //private entryPoint: string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(paymasterUrl: string, _entryPoint: string) {
     super();
 
     this.paymasterUrl = paymasterUrl;
-    this.entryPoint = entryPoint;
+  //  this.entryPoint = entryPoint;
   }
 
   async getPaymasterAndData(
