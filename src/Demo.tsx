@@ -119,24 +119,24 @@ function Demo() {
   );
   // const [batchLoading, setBatchLoading] = useState(false);
   const [mintList, setMintList] = useState<MintItem[]>([
-    // {
-    //   account: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    //   amount: null,
-    //   balance: null,
-    //   mintBtnText: "Mint USDT"
-    // },
-    // {
-    //   account: "0x6Ecbe1DB9EF729CBe972C83Fb886247691Fb6beb",
-    //   amount: null,
-    //   balance: null,
-    //   mintBtnText: "Mint USDT"
-    // },
-    // {
-    //   account: "0x5409ED021D9299bf6814279A6A1411A7e866A631",
-    //   amount: null,
-    //   balance: null,
-    //   mintBtnText: "Mint USDT"
-    // },
+    {
+      account: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      amount: null,
+      balance: null,
+      mintBtnText: "Mint USDT"
+    },
+    {
+      account: "0x6Ecbe1DB9EF729CBe972C83Fb886247691Fb6beb",
+      amount: null,
+      balance: null,
+      mintBtnText: "Mint USDT"
+    },
+    {
+      account: "0x5409ED021D9299bf6814279A6A1411A7e866A631",
+      amount: null,
+      balance: null,
+      mintBtnText: "Mint USDT"
+    },
     {
       account: "0x47E51256Fc9C7e87fd23b3444091D7A877C919B4",
       amount: null,
@@ -192,6 +192,7 @@ function Demo() {
           data.account,
           ethers.utils.parseUnits(data.amount ? data.amount : "0", 6),
         ]),
+     
       ];
       console.log("Waiting for transaction...");
       // 第三步 发送 UserOperation
