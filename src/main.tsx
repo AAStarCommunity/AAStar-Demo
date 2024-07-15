@@ -6,7 +6,7 @@ import "./index.css";
 import '@rainbow-me/rainbowkit/styles.css';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { optimismSepolia, sepolia } from "viem/chains";
+import { arbitrumSepolia, optimismSepolia, sepolia } from "viem/chains";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const router = createBrowserRouter([
@@ -18,7 +18,7 @@ const router = createBrowserRouter([
 const config = getDefaultConfig({
   appName: "Demo",
   projectId: "413eed66ad9f8b3bf84e79de8bde9604",
-  chains: [sepolia, optimismSepolia],
+  chains: [sepolia, optimismSepolia, arbitrumSepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
 const queryClient = new QueryClient();

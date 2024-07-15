@@ -104,7 +104,7 @@ export const NetworkdConfig: { [K in NetworkId]: INetwork } = {
     blockExplorerURL: "https://sepolia-optimism.etherscan.io",
     contracts: {
       USDT: "0x1927E2D716D7259d06006bFaF3dBFA22A12d6945",
-      NFT: ethers.constants.AddressZero
+      NFT: "0xcef599508abd274bab8f0d9d9149d9ceed9a2a07"
     },
     bundler: [
       {
