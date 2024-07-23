@@ -6,7 +6,6 @@ export const networkIds = {
   ETH_SEPOLIA: 11155111,
   OP_SEPOLIA: 11155420,
   ARB_SEPOLIA: 421614,
- 
 } as const;
 export type NetworkId = 11155111 | 11155420 | 421614;
 export interface INetwork {
@@ -104,7 +103,7 @@ export const NetworkdConfig: { [K in NetworkId]: INetwork } = {
     blockExplorerURL: "https://sepolia-optimism.etherscan.io",
     contracts: {
       USDT: "0x1927E2D716D7259d06006bFaF3dBFA22A12d6945",
-      NFT: ethers.constants.AddressZero
+      NFT: "0xcef599508abd274bab8f0d9d9149d9ceed9a2a07"
     },
     bundler: [
       {
