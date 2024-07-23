@@ -6,7 +6,6 @@ export const networkIds = {
   ETH_SEPOLIA: 11155111,
   OP_SEPOLIA: 11155420,
   ARB_SEPOLIA: 421614,
- 
 } as const;
 export type NetworkId = 11155111 | 11155420 | 421614;
 export interface INetwork {
