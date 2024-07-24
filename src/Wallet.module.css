@@ -28,7 +28,7 @@
     padding: 20px;
     display: flex;
     gap: 20px;
-    height: calc(100vh - 120px) ;
+    height: calc(100vh - 130px) ;
 }
 .USDTContent {
     flex: 1;
