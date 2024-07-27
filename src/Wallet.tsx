@@ -501,13 +501,19 @@ function App() {
       ),
       entryPointAddress: entryPointAddress,
     });
-    const result = await airAccount.getAccountInfo();
-    if (result) {
-      setUserIfno(result);
-      console.log(result);
-    } else {
+    try {
+      const result = await airAccount.getAccountInfo();
+      if (result) {
+        setUserIfno(result);
+        console.log(result);
+      } else {
+        setUserIfno(null);
+      }
+    }
+    catch(error) {
       setUserIfno(null);
     }
+    
   };
   useEffect(() => {
     loadUserInfo();
@@ -527,7 +533,7 @@ function App() {
   }, []);
   const items: MenuItem[] = [
     {
-      label: "Wallet",
+      label: "Account",
       icon: "pi pi-wallet",
       className: currentPath == "wallet"? styles.menuActive : "",
       command: () => {
