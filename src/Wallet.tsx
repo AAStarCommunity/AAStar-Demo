@@ -747,24 +747,30 @@ function App() {
   const communityTemplate = (communityList: Community []) => {
     //console.log(tokenList, tokenIds);
     return (
-      <div className={styles.NFTCardList}>
+      <div className={styles.CommunityCardList}>
         {communityList.map((community: any) => {
           return (
-            <div className={styles.NFTCard} key={community.id}>
+            <div className={styles.CommunityCard} key={community.id}>
               {/* <div>{token.loading === true && <Skeleton height="100px"></Skeleton>}</div> */}
-              <div className={styles.NFTImg}>
+              <div className={styles.CommunityImg}>
                 <img src={community.logo}></img>
               </div>
-              <div className={styles.NFTText}>{community.name}</div>
-              <div className={styles.NFTText}>
-                <Button
+              <div>
+              <div className={styles.CommunityText}>{community.name}</div>
+              <div className={styles.CommunityText}>{community.desc}</div>
+              <div className={styles.CommunityText}>
+               
+              </div>
+             
+              </div>
+              <div> <Button
                   label="Join"
                   size="small"
                   onClick={() => {
                   
                   }}
-                ></Button>{" "}
-              </div>
+                ></Button></div>
+             
             </div>
           );
         })}
