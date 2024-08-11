@@ -1053,7 +1053,7 @@ function App() {
                 ></OrderList>
               </Fieldset>
             </div>
-            <Fieldset legend="Send Message" toggleable>
+            {/* <Fieldset legend="Send Message" toggleable>
             <Card className={styles.USDTContent} title="Send Message">
               <div className="flex flex-column gap-2">
                 <div className={styles.NotificationHelper}>
@@ -1072,7 +1072,7 @@ function App() {
                 </div>
               </div>
             </Card>
-            </Fieldset>
+            </Fieldset> */}
           </div>
         )}
       </div>
