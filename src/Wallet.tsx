@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CONSTANTS, PushAPI } from '@pushprotocol/restapi';
+import { CONSTANTS, PushAPI } from "@pushprotocol/restapi";
 
 import { Avatar } from "primereact/avatar";
 import styles from "./Wallet.module.css";
@@ -30,7 +30,8 @@ import { Column } from "primereact/column";
 import SendNFTDialog from "./components/SendNFTDialog";
 import CreateCommunityDialog from "./components/CreateCommunityDialog";
 import { InputText } from "primereact/inputtext";
-
+import { OrderList } from "primereact/orderlist";
+import { Fieldset } from "primereact/fieldset";
 
 interface TransactionLog {
   aaAccount: string;
@@ -46,6 +47,8 @@ interface Community {
 const TetherTokenABI = TetherToken.abi;
 const AAStarDemoNFTABI = AAStarDemoNFT.abi;
 const CommunityManagerABI = CommunityManager.abi;
+
+let historyMsg = [];
 
 function App() {
   const menuLeft = useRef<Menu>(null);
@@ -615,29 +618,110 @@ function App() {
     const result = await communityManager.getCommunityList();
     setCommunityList(result);
   };
-  const connectPushNotification = async () =>{
+  const connectPushNotification = async () => {
     const signer = ethers.Wallet.createRandom();
-    console.log('signer addr: ' + signer.address)
+    console.log("signer addr: " + signer.address);
     const currentUser = await PushAPI.initialize(signer, {
       env: CONSTANTS.ENV.PROD,
     });
     const stream = await currentUser.initStream([CONSTANTS.STREAM.CHAT]);
-    stream.on(CONSTANTS.STREAM.CHAT, (message) => { 
-      try{
-        const json = JSON.parse(message);
-        console.log('from:', json.from);
-        console.log('msg:', json.message.content);
+    stream.on(CONSTANTS.STREAM.CHAT, (json) => {
+      try {
+        console.log(json);
+        const notificationPopup = toast.loading("Loading...");
+        console.log("from:", json.from);
+        console.log("msg:", json.message.content);
+        // save the message to the local storage
+        const messages = localStorage.getItem("wallet-messages");
+        if (messages) {
+          const messageList = JSON.parse(messages);
+          const msgObj = {
+            id: json.chatId,
+            from: json.from,
+            message: json.message.content,
+            timestamp: json.timestamp,
+          };
+          messageList.push(msgObj);
+          localStorage.setItem("wallet-messages", JSON.stringify(messageList));
+          console.log(msgObj);
+        } else {
+          localStorage.setItem(
+            "wallet-messages",
+            JSON.stringify([
+              {
+                id: json.chatId,
+                from: json.from,
+                message: json.message.content,
+                timestamp: json.timestamp,
+              },
+            ])
+          );
+        }
+        historyMsg.push({
+          id: json.chatId,
+          from: json.from,
+          message: json.message.content,
+          timestamp: json.timestamp,
+        });
+        toast.update(notificationPopup, {
+          render: json.message.content,
+          type: "success",
+          isLoading: false,
+          autoClose: 5000,
+        });
       } catch (error) {
-        console.log(message);
+        console.log(json);
         console.log(error);
       }
     });
     stream.connect();
   };
+  const itemTemplate = (item: any) => {
+    console.log(item);
+    return (
+      <div className="flex flex-wrap p-2 align-items-center gap-3">
+        <div className="flex-1 flex flex-column gap-2 xl:mr-8">
+          <span className="font-bold">消息：{item.message}</span>
+          <div className="flex align-items-center gap-2">
+            <span>来源：{item.from}</span>
+          </div>
+        </div>
+        <span className="font-bold text-900">
+          时间：
+          {new Date(parseInt(item.timestamp))
+            .toLocaleString("zh-CN", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })
+            .replace(/\//g, "-")}
+        </span>
+      </div>
+    );
+  };
+  const getNotificationHistory = () => {
+    const messages = localStorage.getItem("wallet-messages");
+    if (messages) {
+      const messageList = JSON.parse(messages);
+      messageList.forEach((message: any) => {
+        historyMsg.push({
+          id: message.id,
+          from: message.from,
+          message: message.message,
+          timestamp: message.timestamp,
+        });
+      });
+    }
+  };
   useEffect(() => {
     loadUserInfo();
     loadCommunityManagerList();
     connectPushNotification();
+    getNotificationHistory();
   }, []);
 
   useEffect(() => {
@@ -958,10 +1042,19 @@ function App() {
 
         {currentPath === "notification" && (
           <div className={styles.Notification}>
-            <Card
-              className={styles.USDTContent}
-              title="Send Message"              
-            >
+            <div className="card xl:flex xl:justify-content-center">
+              <Fieldset legend="History Messages" toggleable>
+                <OrderList
+                  dataKey="id"
+                  value={historyMsg}
+                  // onChange={(e) => setProducts(e.value)}
+                  itemTemplate={itemTemplate}
+                  header="Message Center"
+                ></OrderList>
+              </Fieldset>
+            </div>
+            <Fieldset legend="Send Message" toggleable>
+            <Card className={styles.USDTContent} title="Send Message">
               <div className="flex flex-column gap-2">
                 <div className={styles.NotificationHelper}>
                   <label htmlFor="target">Target Wallet Address</label>
@@ -979,6 +1072,7 @@ function App() {
                 </div>
               </div>
             </Card>
+            </Fieldset>
           </div>
         )}
       </div>
