@@ -139,3 +139,15 @@
     cursor: pointer;
     margin-bottom: 20px;
 }
+
+.Notification {
+    background-color: #ffffff;
+    border: 1px solid #462c09;
+    border-radius: 6px;
+    padding: 20px;
+  
+    height: calc(100vh - 180px) ;
+}
+.NotificationHelper {
+    padding: 5px 0 5px 0;
+}

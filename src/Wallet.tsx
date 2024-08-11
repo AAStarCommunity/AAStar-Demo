@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { CONSTANTS, PushAPI } from '@pushprotocol/restapi';
+
 import { Avatar } from "primereact/avatar";
 import styles from "./Wallet.module.css";
 import AccountSignDialog from "./components/AccountSignDialog";
@@ -26,6 +29,8 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import SendNFTDialog from "./components/SendNFTDialog";
 import CreateCommunityDialog from "./components/CreateCommunityDialog";
+import { InputText } from "primereact/inputtext";
+
 
 interface TransactionLog {
   aaAccount: string;
@@ -203,9 +208,7 @@ function App() {
     }
   };
 
-
-  const createCommunity = async (community : any) => {
-  
+  const createCommunity = async (community: any) => {
     community.id = 0;
     community.owner = ethers.constants.AddressZero;
     const id = toast.loading("Please wait...");
@@ -236,11 +239,14 @@ function App() {
         )
       );
       // Encode the calls
-      const callTo = [NetworkdConfig[networkIds.OP_SEPOLIA].contracts.CommunityManager];
+      const callTo = [
+        NetworkdConfig[networkIds.OP_SEPOLIA].contracts.CommunityManager,
+      ];
       const callData = [
-        CommunityManagerContract.interface.encodeFunctionData("createCommunity", [
-          community,
-        ]),
+        CommunityManagerContract.interface.encodeFunctionData(
+          "createCommunity",
+          [community]
+        ),
       ];
       console.log("Waiting for transaction...");
       // 第三步 发送 UserOperation
@@ -607,12 +613,31 @@ function App() {
       )
     );
     const result = await communityManager.getCommunityList();
-    setCommunityList(result)
-  
+    setCommunityList(result);
+  };
+  const connectPushNotification = async () =>{
+    const signer = ethers.Wallet.createRandom();
+    console.log('signer addr: ' + signer.address)
+    const currentUser = await PushAPI.initialize(signer, {
+      env: CONSTANTS.ENV.PROD,
+    });
+    const stream = await currentUser.initStream([CONSTANTS.STREAM.CHAT]);
+    stream.on(CONSTANTS.STREAM.CHAT, (message) => { 
+      try{
+        const json = JSON.parse(message);
+        console.log('from:', json.from);
+        console.log('msg:', json.message.content);
+      } catch (error) {
+        console.log(message);
+        console.log(error);
+      }
+    });
+    stream.connect();
   };
   useEffect(() => {
     loadUserInfo();
     loadCommunityManagerList();
+    connectPushNotification();
   }, []);
 
   useEffect(() => {
@@ -658,6 +683,14 @@ function App() {
       className: currentPath == "setting" ? styles.menuActive : "",
       command: () => {
         setCurrentPath("setting");
+      },
+    },
+    {
+      label: "Notification",
+      icon: "pi pi-bell",
+      className: currentPath == "notification" ? styles.menuActive : "",
+      command: () => {
+        setCurrentPath("notification");
       },
     },
   ];
@@ -744,7 +777,7 @@ function App() {
     );
   };
 
-  const communityTemplate = (communityList: Community []) => {
+  const communityTemplate = (communityList: Community[]) => {
     //console.log(tokenList, tokenIds);
     return (
       <div className={styles.CommunityCardList}>
@@ -756,21 +789,14 @@ function App() {
                 <img src={community.logo}></img>
               </div>
               <div>
-              <div className={styles.CommunityText}>{community.name}</div>
-              <div className={styles.CommunityText}>{community.desc}</div>
-              <div className={styles.CommunityText}>
-               
+                <div className={styles.CommunityText}>{community.name}</div>
+                <div className={styles.CommunityText}>{community.desc}</div>
+                <div className={styles.CommunityText}></div>
               </div>
-             
+              <div>
+                {" "}
+                <Button label="Join" size="small" onClick={() => {}}></Button>
               </div>
-              <div> <Button
-                  label="Join"
-                  size="small"
-                  onClick={() => {
-                  
-                  }}
-                ></Button></div>
-             
             </div>
           );
         })}
@@ -874,7 +900,6 @@ function App() {
                 }`}
               ></Chip>
               <DataView
-                
                 value={tokenList}
                 listTemplate={listTemplate as any}
               ></DataView>
@@ -919,16 +944,41 @@ function App() {
                 label="Create"
                 className={styles.mintUSDTBtn}
                 onClick={() => {
-                  setIsShowCreateCommunityDialog(true)
+                  setIsShowCreateCommunityDialog(true);
                 }}
               />
-             
             </div>
             <DataView
-            className={styles.CommunityDataView}
-                value={communityList}
-                listTemplate={communityTemplate as any}
-              ></DataView>
+              className={styles.CommunityDataView}
+              value={communityList}
+              listTemplate={communityTemplate as any}
+            ></DataView>
+          </div>
+        )}
+
+        {currentPath === "notification" && (
+          <div className={styles.Notification}>
+            <Card
+              className={styles.USDTContent}
+              title="Send Message"              
+            >
+              <div className="flex flex-column gap-2">
+                <div className={styles.NotificationHelper}>
+                  <label htmlFor="target">Target Wallet Address</label>
+                </div>
+                <InputText
+                  type="text"
+                  id="target"
+                  className="p-inputtext-lg"
+                  aria-describedby="target-help"
+                />
+                <div className={styles.NotificationHelper}>
+                  <small id="username-help">
+                    Enter wallet address who you want to send.
+                  </small>
+                </div>
+              </div>
+            </Card>
           </div>
         )}
       </div>
@@ -972,7 +1022,7 @@ function App() {
         onCreate={async (data, callback: any) => {
           await createCommunity(data);
           callback();
-          setIsShowCreateCommunityDialog(false)
+          setIsShowCreateCommunityDialog(false);
         }}
       ></CreateCommunityDialog>
       <ToastContainer />
