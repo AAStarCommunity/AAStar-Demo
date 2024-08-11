@@ -49,9 +49,16 @@ const AAStarDemoNFTABI = AAStarDemoNFT.abi;
 const CommunityManagerABI = CommunityManager.abi;
 
 let historyMsg = [];
+let receiverSigner: ethers.Wallet;
+let userAlice: PushAPI;
 
 function App() {
   const menuLeft = useRef<Menu>(null);
+  const [inputValue, setInputValue] = useState("");
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
+
   const [userInfo, setUserIfno] = useState<any>(null);
   const [currentPath, setCurrentPath] = useState("wallet");
   const [mintLoading, setMintLoading] = useState(false);
@@ -619,9 +626,9 @@ function App() {
     setCommunityList(result);
   };
   const connectPushNotification = async () => {
-    const signer = ethers.Wallet.createRandom();
-    console.log("signer addr: " + signer.address);
-    const currentUser = await PushAPI.initialize(signer, {
+    receiverSigner = ethers.Wallet.createRandom();
+    console.log("signer addr: " + receiverSigner.address);
+    const currentUser = await PushAPI.initialize(receiverSigner, {
       env: CONSTANTS.ENV.PROD,
     });
     const stream = await currentUser.initStream([CONSTANTS.STREAM.CHAT]);
@@ -705,6 +712,7 @@ function App() {
   };
   const getNotificationHistory = () => {
     const messages = localStorage.getItem("wallet-messages");
+    historyMsg = [];
     if (messages) {
       const messageList = JSON.parse(messages);
       messageList.forEach((message: any) => {
@@ -717,6 +725,40 @@ function App() {
       });
     }
   };
+  const sendNotification = async () => {
+    console.log("sendNotification");
+    const notificationPopup = toast.loading("Ready to broadcast...");
+    if (userAlice == null) {
+      const signerAlice = ethers.Wallet.createRandom();
+      userAlice = await PushAPI.initialize(signerAlice, {
+        env: CONSTANTS.ENV.PROD,
+      });
+    }
+    toast.update(notificationPopup, {
+      render: "Connected to the server...",
+      type: "info",
+      isLoading: false,
+      autoClose: 5000,
+    });
+    // const stream = await userAlice.initStream([CONSTANTS.STREAM.CHAT]);
+    // stream.on(CONSTANTS.STREAM.CHAT, (message) => {
+    //   console.log(message);
+    // });
+    // stream.connect();
+    const userBobAddress = receiverSigner.address;
+    await userAlice.chat.send(userBobAddress, {
+      content: inputValue,
+      type: "Text",
+    });
+    console.log("Message sent from Alice to ", userBobAddress);
+    toast.update(notificationPopup, {
+      render: "Send success",
+      type: "info",
+      isLoading: false,
+      autoClose: 1000,
+    });
+  };
+
   useEffect(() => {
     loadUserInfo();
     loadCommunityManagerList();
@@ -1053,26 +1095,27 @@ function App() {
                 ></OrderList>
               </Fieldset>
             </div>
-            {/* <Fieldset legend="Send Message" toggleable>
-            <Card className={styles.USDTContent} title="Send Message">
-              <div className="flex flex-column gap-2">
-                <div className={styles.NotificationHelper}>
-                  <label htmlFor="target">Target Wallet Address</label>
+            <Fieldset legend="Broadcast" toggleable>
+              <Card className={styles.USDTContent} title="Message">
+                <div className="flex flex-column gap-2">
+                  <InputText
+                    type="text"
+                    onChange={handleInputChange} 
+                    id="target"
+                    className="p-inputtext-lg"
+                    aria-describedby="target-help"
+                  />
+                  <Button
+                    label="Send"
+                    className="p-button-lg"
+                    onClick={sendNotification}
+                  />
+                  <div className={styles.NotificationHelper}>
+                    <small id="username-help">Enter message to broadcast</small>
+                  </div>
                 </div>
-                <InputText
-                  type="text"
-                  id="target"
-                  className="p-inputtext-lg"
-                  aria-describedby="target-help"
-                />
-                <div className={styles.NotificationHelper}>
-                  <small id="username-help">
-                    Enter wallet address who you want to send.
-                  </small>
-                </div>
-              </div>
-            </Card>
-            </Fieldset> */}
+              </Card>
+            </Fieldset>
           </div>
         )}
       </div>
