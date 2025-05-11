@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { CONSTANTS, PushAPI } from "@pushprotocol/restapi";
+
 import { Avatar } from "primereact/avatar";
 import styles from "./Wallet.module.css";
 import AccountSignDialog from "./components/AccountSignDialog";
@@ -26,6 +29,9 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import SendNFTDialog from "./components/SendNFTDialog";
 import CreateCommunityDialog from "./components/CreateCommunityDialog";
+import { InputText } from "primereact/inputtext";
+import { OrderList } from "primereact/orderlist";
+import { Fieldset } from "primereact/fieldset";
 
 interface TransactionLog {
   aaAccount: string;
@@ -42,8 +48,17 @@ const TetherTokenABI = TetherToken.abi;
 const AAStarDemoNFTABI = AAStarDemoNFT.abi;
 const CommunityManagerABI = CommunityManager.abi;
 
+let historyMsg = [];
+let receiverSigner: ethers.Wallet;
+let userAlice: PushAPI;
+
 function App() {
   const menuLeft = useRef<Menu>(null);
+  const [inputValue, setInputValue] = useState("");
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
+
   const [userInfo, setUserIfno] = useState<any>(null);
   const [currentPath, setCurrentPath] = useState("wallet");
   const [mintLoading, setMintLoading] = useState(false);
@@ -203,9 +218,7 @@ function App() {
     }
   };
 
-
-  const createCommunity = async (community : any) => {
-  
+  const createCommunity = async (community: any) => {
     community.id = 0;
     community.owner = ethers.constants.AddressZero;
     const id = toast.loading("Please wait...");
@@ -236,11 +249,14 @@ function App() {
         )
       );
       // Encode the calls
-      const callTo = [NetworkdConfig[networkIds.OP_SEPOLIA].contracts.CommunityManager];
+      const callTo = [
+        NetworkdConfig[networkIds.OP_SEPOLIA].contracts.CommunityManager,
+      ];
       const callData = [
-        CommunityManagerContract.interface.encodeFunctionData("createCommunity", [
-          community,
-        ]),
+        CommunityManagerContract.interface.encodeFunctionData(
+          "createCommunity",
+          [community]
+        ),
       ];
       console.log("Waiting for transaction...");
       // 第三步 发送 UserOperation
@@ -607,12 +623,147 @@ function App() {
       )
     );
     const result = await communityManager.getCommunityList();
-    setCommunityList(result)
-  
+    setCommunityList(result);
   };
+  const connectPushNotification = async () => {
+    receiverSigner = ethers.Wallet.createRandom();
+    console.log("signer addr: " + receiverSigner.address);
+    const currentUser = await PushAPI.initialize(receiverSigner, {
+      env: CONSTANTS.ENV.PROD,
+    });
+    const stream = await currentUser.initStream([CONSTANTS.STREAM.CHAT]);
+    stream.on(CONSTANTS.STREAM.CHAT, (json) => {
+      try {
+        console.log(json);
+        const notificationPopup = toast.loading("Loading...");
+        console.log("from:", json.from);
+        console.log("msg:", json.message.content);
+        // save the message to the local storage
+        const messages = localStorage.getItem("wallet-messages");
+        if (messages) {
+          const messageList = JSON.parse(messages);
+          const msgObj = {
+            id: json.chatId,
+            from: json.from,
+            message: json.message.content,
+            timestamp: json.timestamp,
+          };
+          messageList.push(msgObj);
+          localStorage.setItem("wallet-messages", JSON.stringify(messageList));
+          console.log(msgObj);
+        } else {
+          localStorage.setItem(
+            "wallet-messages",
+            JSON.stringify([
+              {
+                id: json.chatId,
+                from: json.from,
+                message: json.message.content,
+                timestamp: json.timestamp,
+              },
+            ])
+          );
+        }
+        historyMsg.push({
+          id: json.chatId,
+          from: json.from,
+          message: json.message.content,
+          timestamp: json.timestamp,
+        });
+        toast.update(notificationPopup, {
+          render: json.message.content,
+          type: "success",
+          isLoading: false,
+          autoClose: 5000,
+        });
+      } catch (error) {
+        console.log(json);
+        console.log(error);
+      }
+    });
+    stream.connect();
+  };
+  const itemTemplate = (item: any) => {
+    console.log(item);
+    return (
+      <div className="flex flex-wrap p-2 align-items-center gap-3">
+        <div className="flex-1 flex flex-column gap-2 xl:mr-8">
+          <span className="font-bold">消息：{item.message}</span>
+          <div className="flex align-items-center gap-2">
+            <span>来源：{item.from}</span>
+          </div>
+        </div>
+        <span className="font-bold text-900">
+          时间：
+          {new Date(parseInt(item.timestamp))
+            .toLocaleString("zh-CN", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })
+            .replace(/\//g, "-")}
+        </span>
+      </div>
+    );
+  };
+  const getNotificationHistory = () => {
+    const messages = localStorage.getItem("wallet-messages");
+    historyMsg = [];
+    if (messages) {
+      const messageList = JSON.parse(messages);
+      messageList.forEach((message: any) => {
+        historyMsg.push({
+          id: message.id,
+          from: message.from,
+          message: message.message,
+          timestamp: message.timestamp,
+        });
+      });
+    }
+  };
+  const sendNotification = async () => {
+    console.log("sendNotification");
+    const notificationPopup = toast.loading("Ready to broadcast...");
+    if (userAlice == null) {
+      const signerAlice = ethers.Wallet.createRandom();
+      userAlice = await PushAPI.initialize(signerAlice, {
+        env: CONSTANTS.ENV.PROD,
+      });
+    }
+    toast.update(notificationPopup, {
+      render: "Connected to the server...",
+      type: "info",
+      isLoading: false,
+      autoClose: 5000,
+    });
+    // const stream = await userAlice.initStream([CONSTANTS.STREAM.CHAT]);
+    // stream.on(CONSTANTS.STREAM.CHAT, (message) => {
+    //   console.log(message);
+    // });
+    // stream.connect();
+    const userBobAddress = receiverSigner.address;
+    await userAlice.chat.send(userBobAddress, {
+      content: inputValue,
+      type: "Text",
+    });
+    console.log("Message sent from Alice to ", userBobAddress);
+    toast.update(notificationPopup, {
+      render: "Send success",
+      type: "info",
+      isLoading: false,
+      autoClose: 1000,
+    });
+  };
+
   useEffect(() => {
     loadUserInfo();
     loadCommunityManagerList();
+    connectPushNotification();
+    getNotificationHistory();
   }, []);
 
   useEffect(() => {
@@ -658,6 +809,14 @@ function App() {
       className: currentPath == "setting" ? styles.menuActive : "",
       command: () => {
         setCurrentPath("setting");
+      },
+    },
+    {
+      label: "Notification",
+      icon: "pi pi-bell",
+      className: currentPath == "notification" ? styles.menuActive : "",
+      command: () => {
+        setCurrentPath("notification");
       },
     },
   ];
@@ -744,7 +903,7 @@ function App() {
     );
   };
 
-  const communityTemplate = (communityList: Community []) => {
+  const communityTemplate = (communityList: Community[]) => {
     //console.log(tokenList, tokenIds);
     return (
       <div className={styles.CommunityCardList}>
@@ -756,21 +915,14 @@ function App() {
                 <img src={community.logo}></img>
               </div>
               <div>
-              <div className={styles.CommunityText}>{community.name}</div>
-              <div className={styles.CommunityText}>{community.desc}</div>
-              <div className={styles.CommunityText}>
-               
+                <div className={styles.CommunityText}>{community.name}</div>
+                <div className={styles.CommunityText}>{community.desc}</div>
+                <div className={styles.CommunityText}></div>
               </div>
-             
+              <div>
+                {" "}
+                <Button label="Join" size="small" onClick={() => {}}></Button>
               </div>
-              <div> <Button
-                  label="Join"
-                  size="small"
-                  onClick={() => {
-                  
-                  }}
-                ></Button></div>
-             
             </div>
           );
         })}
@@ -874,7 +1026,6 @@ function App() {
                 }`}
               ></Chip>
               <DataView
-                
                 value={tokenList}
                 listTemplate={listTemplate as any}
               ></DataView>
@@ -919,16 +1070,52 @@ function App() {
                 label="Create"
                 className={styles.mintUSDTBtn}
                 onClick={() => {
-                  setIsShowCreateCommunityDialog(true)
+                  setIsShowCreateCommunityDialog(true);
                 }}
               />
-             
             </div>
             <DataView
-            className={styles.CommunityDataView}
-                value={communityList}
-                listTemplate={communityTemplate as any}
-              ></DataView>
+              className={styles.CommunityDataView}
+              value={communityList}
+              listTemplate={communityTemplate as any}
+            ></DataView>
+          </div>
+        )}
+
+        {currentPath === "notification" && (
+          <div className={styles.Notification}>
+            <div className="card xl:flex xl:justify-content-center">
+              <Fieldset legend="History Messages" toggleable>
+                <OrderList
+                  dataKey="id"
+                  value={historyMsg}
+                  // onChange={(e) => setProducts(e.value)}
+                  itemTemplate={itemTemplate}
+                  header="Message Center"
+                ></OrderList>
+              </Fieldset>
+            </div>
+            <Fieldset legend="Broadcast" toggleable>
+              <Card className={styles.USDTContent} title="Message">
+                <div className="flex flex-column gap-2">
+                  <InputText
+                    type="text"
+                    onChange={handleInputChange} 
+                    id="target"
+                    className="p-inputtext-lg"
+                    aria-describedby="target-help"
+                  />
+                  <Button
+                    label="Send"
+                    className="p-button-lg"
+                    onClick={sendNotification}
+                  />
+                  <div className={styles.NotificationHelper}>
+                    <small id="username-help">Enter message to broadcast</small>
+                  </div>
+                </div>
+              </Card>
+            </Fieldset>
           </div>
         )}
       </div>
@@ -972,7 +1159,7 @@ function App() {
         onCreate={async (data, callback: any) => {
           await createCommunity(data);
           callback();
-          setIsShowCreateCommunityDialog(false)
+          setIsShowCreateCommunityDialog(false);
         }}
       ></CreateCommunityDialog>
       <ToastContainer />
